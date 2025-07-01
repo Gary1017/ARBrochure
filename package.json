@@ -1,0 +1,31 @@
+{
+  "name": "ar-brochure-app",
+  "version": "1.0.0",
+  "description": "AR Brochure App with image tracking and 3D model interaction",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:all": "pnpm --parallel --filter ./packages/* dev",
+    "build": "pnpm --filter frontend build",
+    "build:backend": "pnpm --filter backend build",
+    "build:all": "pnpm --recursive build",
+    "test": "pnpm --recursive test",
+    "test:watch": "pnpm --recursive test:watch",
+    "lint": "pnpm --recursive lint",
+    "type-check": "pnpm --recursive type-check"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+} 
