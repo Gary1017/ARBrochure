@@ -1,0 +1,68 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Coding Style Guidelines
+
+- Always write correct, best practice, DRY (Don't Repeat Yourself), bug-free, fully functional, and working code.
+- Prioritize easy-to-read and maintainable code over being overly performant where clarity is compromised.
+- Fully implement all requested functionality; leave no TODOs, placeholders, or missing pieces.
+- Ensure code is complete and thoroughly verified.
+- Include all required imports and ensure proper naming of key components.
+- Be concise in comments and explanations.
+
+### TypeScript Usage
+- Use TypeScript for all code; prefer `interface` over `type` for defining object structures, especially when extending.
+- Avoid `any` or `unknown` unless absolutely necessary; look for type definitions in the codebase instead.
+- Use discriminated unions with exhaustiveness checking for type narrowing.
+- Implement proper generics with appropriate constraints.
+- Leverage `const` assertions for literal types.
+- Avoid type assertions with `as` or `!`.
+- Use nullish coalescing ( `??` ) and optional chaining ( `?.` ) operators appropriately.
+- Prefix unused variables with an underscore (e.g., `_unusedParam`).
+
+### JavaScript Best Practices
+- Use `const` for all variables that aren't reassigned, `let` otherwise.
+- Don't use `await` in return statements (return the Promise directly).
+- Use rest parameters instead of the `arguments` object.
+- Use template literals instead of string concatenation.
+
+### Import Organization
+- Keep imports at the top of the file.
+- Group imports in this order: `built-in` → `external` → `internal` → `parent` → `sibling` → `index` → `object` → `type`.
+- Add blank lines between import groups.
+
+### Development Philosophy
+- Write clean, maintainable, and scalable code.
+- Follow SOLID principles.
+- Prefer functional and declarative programming patterns over imperative.
+- Emphasize type safety and static analysis.
+- Practice component-driven development.
+- Pracitce test-driven development.
+
+## Test-Driven Development (TDD) Workflow
+
+- **Spec First, Code Second:** ALWAYS check for existing specs before modifying or creating code. If no spec exists, create one BEFORE implementing the feature. Use specs to define the expected behavior and interface.
+- **Implementation Process:**
+    a. Review existing specs (if any).
+    b. Write new specs defining expected behavior.
+    c. Run specs (they should fail - RED phase).
+    d. Implement code to make specs pass (GREEN phase).
+    e. Refactor while keeping specs green (REFACTOR phase).
+- **Test Coverage:** Focus on happy path scenarios, edge cases, error conditions, and boundary values.
+- **Run Tests Frequently:** Run your tests frequently to catch errors early. Use Jest's watch mode to automatically run tests when files change.
+- **No Implementation Without Specs:** Do not write or modify code without corresponding failing tests.
+
+## Jest Testing Guidelines
+
+- **Avoid testing implementation details:** Focus on testing the public API of your code, rather than internal implementation details. Test the "what," not the "how".
+- **Use setup and teardown methods:** Use `beforeAll`, `afterAll`, `beforeEach`, and `afterEach` hooks to set up and tear down the environment for your tests.
+- **Mock external dependencies:** Use mocking to isolate your code from external dependencies (e.g., Feishu Database API calls, mind-ar-js engine, Three.js rendering context). Jest provides built-in mocking capabilities with `jest.mock` and `jest.spyOn`.
+- **Write tests that are easy to read and maintain:** Keep tests concise and focused. Use clear and consistent formatting. Add comments to explain complex logic.
+- **Aim for high test coverage, but prioritize meaningful tests over quantity:** Aim for high test coverage to ensure well-tested code, but prioritize tests that verify core functionality.
+- **Use Jest's built-in matchers effectively:** Utilize matchers like `toBe`, `toEqual`, `toBeGreaterThan`, `toContain`, `toHaveBeenCalled`.
+- **Handle asynchronous code correctly:** Use `async/await` or Promises to handle asynchronous code in tests. Use `resolves` and `rejects` matchers.
+- **Leverage code coverage reports:** Use Jest's code coverage reports (`--coverage` flag) to identify areas not well-tested.
+
+- **Keep test data separate from test logic:** Externalize test data to improve readability and maintainability. Use fixtures or factories.

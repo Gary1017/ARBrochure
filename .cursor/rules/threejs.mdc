@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+## Three.js and mind-ar-js Guidance
+
+- **AR Initialization & Tracking:** Ensure correct implementation for QR code scanning, camera access, mind-ar-js image target recognition, and real-time 6-DoF pose tracking.
+- **3D Model Visualization:** Focus on accurate display of animated 3D models on the detected plane.
+- **Performance Optimization:** Prioritize efficient rendering and resource management within Three.js for mobile AR.
+- **Raycasting Algorithms:** Verify raycasting for user interaction with 3D models.
+- **Model Loading Utilities:** Ensure robust and efficient loading of 3D models.
+- **Animation State Transitions:** Implement smooth and correct animation state transitions.

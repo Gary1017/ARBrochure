@@ -1,0 +1,13 @@
+---
+description: 
+globs: src/backend/**/*.ts, src/backend/**/*.js
+alwaysApply: false
+---
+## Node.js Backend & API Guidelines
+
+- **API Endpoint Behavior:** Ensure correct and secure API endpoint behavior.
+- **Secure Feishu API Communication:** Implement secure communication protocols for Feishu API integration.
+- **Analytics Data Logging:** Ensure accurate logging of analytics data.
+- **Static Asset Serving:** Configure Node.js to efficiently serve static assets.
+
+- **API Proxying:** Implement robust API proxying if required.

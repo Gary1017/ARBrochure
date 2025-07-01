@@ -1,0 +1,19 @@
+---
+description: 
+globs: *.tsx,*.jsx
+alwaysApply: false
+---
+## React Best Practices
+
+- Use functional components with hooks over class components.
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., `isLoaded`, `hasError`).
+- Favor named exports for components and utilities.
+- Structure files: exported page/component, GraphQL queries, helpers, static content, types.
+- Use declarative JSX, keeping JSX minimal and readable.
+- Minimize 'use client', useEffect, and useState, favoring React Server Components where applicable (though this project primarily uses Web AR, keep this in mind for any Node.js backend UI).
+
+### UI and Styling
+- Use Tailwind for utility-based styling.
+
+- Avoid inline CSS unless justified.
