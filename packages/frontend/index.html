@@ -10,11 +10,6 @@
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="AR Brochure App - Interactive 3D models on your brochure" />
     
-    <!-- Preload critical resources -->
-    <link rel="preload" href="https://aframe.io/releases/1.6.0/aframe.min.js" as="script" />
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js" as="script" />
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js" as="script" />
-    
     <title>AR Brochure App</title>
     
     <style>
@@ -66,18 +61,18 @@
     
     <script>
       // Remove loading screen when React app mounts
-      window.addEventListener('DOMContentLoaded', () => {
+      window.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
-          const loading = document.getElementById('loading');
+          const loading = document.getElementById("loading");
           if (loading) {
-            loading.style.opacity = '0';
+            loading.style.opacity = "0";
             setTimeout(() => loading.remove(), 300);
           }
         }, 1000);
       });
       
       // Handle orientation changes
-      window.addEventListener('orientationchange', () => {
+      window.addEventListener("orientationchange", () => {
         setTimeout(() => {
           window.scrollTo(0, 1);
         }, 500);

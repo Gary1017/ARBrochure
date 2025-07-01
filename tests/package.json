@@ -1,0 +1,16 @@
+{
+  "name": "tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Root-level tests for AR Brochure App",
+  "scripts": {
+    "test": "jest --config jest.config.js"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "@types/jest": "^29.5.11",
+    "@testing-library/react": "^14.3.1",
+    "@testing-library/jest-dom": "^6.4.2"
+  }
+} 
