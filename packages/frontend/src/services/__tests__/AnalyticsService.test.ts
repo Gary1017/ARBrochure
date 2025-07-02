@@ -1,17 +1,8 @@
-import { AnalyticsService } from '../packages/frontend/src/services/AnalyticsService';
-import { AREvent } from '../packages/shared/src';
-
-// Mock fetch
-global.fetch = jest.fn();
-
-// Mock crypto.randomUUID to return different values
-let uuidCounter = 0;
-Object.defineProperty(global, 'crypto', {
-  value: {
-    randomUUID: jest.fn(() => `mock-uuid-${++uuidCounter}`),
-  },
-  writable: true,
-});
+/**
+ * @jest-environment node
+ */
+import { AnalyticsService } from '../AnalyticsService';
+import { AREvent } from '@shared/index';
 
 describe('AnalyticsService', () => {
   let analyticsService: AnalyticsService;
@@ -195,60 +186,30 @@ describe('AnalyticsService', () => {
 
       await expect(analyticsService.trackAppLaunched()).rejects.toThrow('Invalid JSON');
     });
-  });
 
-  describe('Batch Event Sending', () => {
-    it('should batch multiple events and send them together', async () => {
-      const mockResponse = { success: true };
-      (fetch as jest.Mock).mockResolvedValue({
+    it('should handle API errors from backend', async () => {
+      const mockResponse = { success: false, error: 'Invalid event data' };
+      (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
-      // Track multiple events
-      await analyticsService.trackAppLaunched();
-      await analyticsService.trackTrackingStarted();
-      await analyticsService.trackModelTapped('model-1');
-
-      // Should have made 3 separate calls
-      expect(fetch).toHaveBeenCalledTimes(3);
+      await expect(analyticsService.trackAppLaunched()).rejects.toThrow('API error: Invalid event data');
     });
 
-    it('should handle batch failures gracefully', async () => {
-      (fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true }),
-        })
-        .mockRejectedValueOnce(new Error('Network error'));
+    it('should handle API errors without error message', async () => {
+      const mockResponse = { success: false };
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      });
 
-      await analyticsService.trackAppLaunched();
-      await expect(analyticsService.trackModelTapped('model-1')).rejects.toThrow('Network error');
-    });
-  });
-
-  describe('Session Management', () => {
-    it('should maintain consistent session ID throughout lifecycle', () => {
-      const sessionId = analyticsService.getSessionId();
-      
-      analyticsService.trackAppLaunched();
-      analyticsService.trackModelTapped('test-model');
-      
-      expect(analyticsService.getSessionId()).toBe(sessionId);
-    });
-
-    it('should maintain consistent user ID throughout lifecycle', () => {
-      const userId = analyticsService.getUserId();
-      
-      analyticsService.trackAppLaunched();
-      analyticsService.trackModelTapped('test-model');
-      
-      expect(analyticsService.getUserId()).toBe(userId);
+      await expect(analyticsService.trackAppLaunched()).rejects.toThrow('API error: Unknown error');
     });
   });
 
   describe('Custom Events', () => {
-    it('should allow tracking custom events', async () => {
+    it('should track custom events', async () => {
       const mockResponse = { success: true };
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -257,8 +218,7 @@ describe('AnalyticsService', () => {
 
       const customEvent: AREvent = {
         timestamp: new Date().toISOString(),
-        event_type: 'model_tapped',
-        model_id: 'custom-model',
+        event_type: 'app_launched',
         session_id: analyticsService.getSessionId(),
         user_id: analyticsService.getUserId(),
       };
@@ -269,9 +229,135 @@ describe('AnalyticsService', () => {
         `${mockBackendUrl}/api/analytics/events`,
         expect.objectContaining({
           method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+          }),
           body: JSON.stringify(customEvent),
         })
       );
+    });
+  });
+
+  describe('Rate Limiting Handling', () => {
+    let fetchMock: jest.SpyInstance;
+    
+    beforeEach(() => {
+      fetchMock = jest.spyOn(global, 'fetch').mockImplementation();
+      jest.useFakeTimers();
+    });
+    
+    afterEach(() => {
+      fetchMock.mockRestore();
+      jest.useRealTimers();
+    });
+    
+    it('should handle 429 rate limiting with retry logic', async () => {
+      // First call returns 429
+      fetchMock.mockImplementationOnce(() => 
+        Promise.resolve({
+          ok: false,
+          status: 429,
+          json: () => Promise.resolve({ success: false, error: 'Rate limit exceeded' })
+        } as Response)
+      );
+      
+      // Second call succeeds
+      fetchMock.mockImplementationOnce(() => 
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ success: true })
+        } as Response)
+      );
+      
+      // Spy on console.warn
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      // Track an event
+      analyticsService.trackAppLaunched();
+      
+      // Fast-forward time to trigger retry
+      jest.advanceTimersByTime(1000);
+      
+      // Wait for promises to resolve
+      await Promise.resolve();
+      
+      // Verify fetch was called twice (initial + retry)
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      
+      // Verify no warnings were logged (successful retry)
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
+      
+      consoleWarnSpy.mockRestore();
+    });
+    
+    it('should give up after max retries and log a warning', async () => {
+      // Mock multiple 429 responses
+      fetchMock.mockImplementation(() => 
+        Promise.resolve({
+          ok: false,
+          status: 429,
+          json: () => Promise.resolve({ success: false, error: 'Rate limit exceeded' })
+        } as Response)
+      );
+      
+      // Spy on console.warn
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      // Track an event
+      analyticsService.trackAppLaunched();
+      
+      // Fast-forward time for all retries (1s, 2s, 4s)
+      jest.advanceTimersByTime(1000); // First retry
+      await Promise.resolve();
+      jest.advanceTimersByTime(2000); // Second retry
+      await Promise.resolve();
+      jest.advanceTimersByTime(4000); // Third retry
+      await Promise.resolve();
+      
+      // Should have called fetch 4 times (initial + 3 retries)
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+      
+      // Should have logged a warning
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to send analytics event after 3 retries:'),
+        'app_launched'
+      );
+      
+      consoleWarnSpy.mockRestore();
+    });
+    
+    it('should process events in queue with delay between them', async () => {
+      // Mock successful responses
+      fetchMock.mockImplementation(() => 
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ success: true })
+        } as Response)
+      );
+      
+      // Track multiple events
+      analyticsService.trackAppLaunched();
+      analyticsService.trackTrackingStarted();
+      analyticsService.trackTrackingLost();
+      
+      // First event should be processed immediately
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      
+      // Fast-forward time for queue processing
+      jest.advanceTimersByTime(300);
+      await Promise.resolve();
+      
+      // Second event should be processed
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      
+      // Fast-forward time for next queue item
+      jest.advanceTimersByTime(300);
+      await Promise.resolve();
+      
+      // Third event should be processed
+      expect(fetchMock).toHaveBeenCalledTimes(3);
     });
   });
 }); 

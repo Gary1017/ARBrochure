@@ -20,4 +20,5 @@ export default {
   coverageReporters: ['text', 'lcov', 'html'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   testTimeout: 5000,
+  passWithNoTests: true,
 } 

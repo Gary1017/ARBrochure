@@ -14,8 +14,9 @@
     "build": "pnpm --filter frontend build",
     "build:backend": "pnpm --filter backend build",
     "build:all": "pnpm --recursive build",
-    "test": "pnpm --recursive test",
-    "test:root": "jest --config tests/jest.config.js",
+    "test": "pnpm test:unit && pnpm test:integration",
+    "test:unit": "pnpm --recursive --filter ./packages/* test",
+    "test:integration": "cd tests && pnpm test",
     "test:watch": "pnpm --recursive test:watch",
     "lint": "pnpm --recursive lint",
     "type-check": "pnpm --recursive type-check"

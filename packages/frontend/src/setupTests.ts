@@ -1,37 +1,67 @@
 import '@testing-library/jest-dom';
 
-// Mock ResizeObserver
-global.ResizeObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
-}));
-
-// Mock IntersectionObserver
-global.IntersectionObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
-}));
-
-// Mock matchMedia
-Object.defineProperty(window, 'matchMedia', {
+// Set up crypto mock FIRST before any other imports
+Object.defineProperty(globalThis, 'crypto', {
+  value: {
+    randomUUID: jest.fn(() => 'mock-uuid-12345'),
+  },
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
+  configurable: true,
 });
 
-// Mock WebGL context
+// Also set it on global for backward compatibility
+Object.defineProperty(global, 'crypto', {
+  value: {
+    randomUUID: jest.fn(() => 'mock-uuid-12345'),
+  },
+  writable: true,
+  configurable: true,
+});
+
+// Mock fetch globally with proper response structure
+const mockFetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    json: () => Promise.resolve({ success: true }),
+    text: () => Promise.resolve(''),
+    blob: () => Promise.resolve(new Blob()),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    headers: new Headers(),
+    redirected: false,
+    type: 'basic',
+    url: '',
+    clone: jest.fn(),
+    body: null,
+    bodyUsed: false,
+    bytes: () => Promise.resolve(new Uint8Array()),
+    formData: () => Promise.resolve(new FormData()),
+  } as unknown as Response)
+);
+
+global.fetch = mockFetch;
+
+// Mock matchMedia - guard against missing window
+if (typeof window !== 'undefined' && window.matchMedia === undefined) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation(query => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(), // deprecated
+      removeListener: jest.fn(), // deprecated
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+}
+
+// Mock WebGL context for Three.js
 const mockWebGLContext = {
-  canvas: document.createElement('canvas'),
+  canvas: typeof document !== 'undefined' ? document.createElement('canvas') : null,
   drawArrays: jest.fn(),
   drawElements: jest.fn(),
   createBuffer: jest.fn(() => ({})),
@@ -162,21 +192,58 @@ const mockWebGLContext = {
   stencilMaskSeparate: jest.fn(),
 };
 
-// Mock getContext
-HTMLCanvasElement.prototype.getContext = jest.fn((contextId) => {
-  if (contextId === 'webgl' || contextId === 'webgl2') {
-    return mockWebGLContext as any;
-  }
-  return null;
-});
+// Mock getContext for both WebGL and 2D contexts - guard against missing HTMLCanvasElement
+if (typeof HTMLCanvasElement !== 'undefined') {
+  HTMLCanvasElement.prototype.getContext = jest.fn((contextId) => {
+    if (contextId === 'webgl' || contextId === 'webgl2') {
+      return mockWebGLContext as any;
+    }
+    if (contextId === '2d') {
+      return {
+        fillRect: jest.fn(),
+        clearRect: jest.fn(),
+        getImageData: jest.fn(() => ({ data: new Uint8ClampedArray() })),
+        putImageData: jest.fn(),
+        createImageData: jest.fn(() => ({ data: new Uint8ClampedArray() })),
+        setTransform: jest.fn(),
+        drawImage: jest.fn(),
+        save: jest.fn(),
+        fillText: jest.fn(),
+        restore: jest.fn(),
+        beginPath: jest.fn(),
+        moveTo: jest.fn(),
+        lineTo: jest.fn(),
+        closePath: jest.fn(),
+        stroke: jest.fn(),
+        translate: jest.fn(),
+        scale: jest.fn(),
+        rotate: jest.fn(),
+        arc: jest.fn(),
+        fill: jest.fn(),
+        measureText: jest.fn(() => ({ width: 0 })),
+        transform: jest.fn(),
+        rect: jest.fn(),
+        clip: jest.fn(),
+      };
+    }
+    return null;
+  });
 
-// Mock crypto.randomUUID
-Object.defineProperty(global, 'crypto', {
-  value: {
-    randomUUID: jest.fn(() => 'mock-uuid-12345'),
-  },
-  writable: true,
-});
+  HTMLCanvasElement.prototype.toDataURL = jest.fn(() => 'data:image/png;base64,mock');
+  
+  HTMLCanvasElement.prototype.getBoundingClientRect = jest.fn(() => ({
+    top: 0,
+    left: 0,
+    width: 800,
+    height: 600,
+    right: 800,
+    bottom: 600,
+    x: 0,
+    y: 0,
+    toJSON: jest.fn(),
+  }));
+}
 
-// Mock fetch globally
-global.fetch = jest.fn(); 
+// Mock requestAnimationFrame for Three.js
+global.requestAnimationFrame = jest.fn((cb) => setTimeout(cb, 16));
+global.cancelAnimationFrame = jest.fn(); 

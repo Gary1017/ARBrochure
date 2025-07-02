@@ -9,9 +9,12 @@ import './App.css';
 const AppContainer = styled.div`
   width: 100vw;
   height: 100vh;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
   overflow: hidden;
   background: #000;
+  z-index: 1;
 `;
 
 const App: React.FC = () => {
@@ -19,21 +22,10 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize AR and load assets
-    const initializeApp = async () => {
-      try {
-        // Simulate initialization time
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setIsLoading(false);
-        setTrackingState('tracking');
-      } catch (error) {
-        console.error('Failed to initialize AR:', error);
-        setTrackingState('error');
-        setIsLoading(false);
-      }
-    };
-
-    initializeApp();
+    // Initialize app with shorter loading time
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
   }, []);
 
   if (isLoading) {

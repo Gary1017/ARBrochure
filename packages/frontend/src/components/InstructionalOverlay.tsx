@@ -11,7 +11,7 @@ const OverlayContainer = styled.div`
   z-index: 10;
 `;
 
-const InstructionBox = styled.div<{ visible: boolean }>`
+const InstructionBox = styled.div<{ $visible: boolean }>`
   position: absolute;
   top: 50%;
   left: 50%;
@@ -22,7 +22,7 @@ const InstructionBox = styled.div<{ visible: boolean }>`
   border-radius: 10px;
   text-align: center;
   max-width: 300px;
-  opacity: ${props => props.visible ? 1 : 0};
+  opacity: ${props => props.$visible ? 1 : 0};
   transition: opacity 0.3s ease;
   pointer-events: auto;
 `;
@@ -33,7 +33,7 @@ const InstructionText = styled.p`
   font-weight: 300;
 `;
 
-const StatusIndicator = styled.div<{ status: TrackingState }>`
+const StatusIndicator = styled.div<{ $status: TrackingState }>`
   position: absolute;
   top: 20px;
   right: 20px;
@@ -41,7 +41,7 @@ const StatusIndicator = styled.div<{ status: TrackingState }>`
   height: 12px;
   border-radius: 50%;
   background: ${props => {
-    switch (props.status) {
+    switch (props.$status) {
       case 'tracking': return '#4CAF50';
       case 'lost': return '#FF9800';
       case 'error': return '#F44336';
@@ -49,7 +49,7 @@ const StatusIndicator = styled.div<{ status: TrackingState }>`
     }
   }};
   box-shadow: 0 0 10px ${props => {
-    switch (props.status) {
+    switch (props.$status) {
       case 'tracking': return 'rgba(76, 175, 80, 0.5)';
       case 'lost': return 'rgba(255, 152, 0, 0.5)';
       case 'error': return 'rgba(244, 67, 54, 0.5)';
@@ -80,8 +80,8 @@ const InstructionalOverlay: React.FC<InstructionalOverlayProps> = ({ trackingSta
 
   return (
     <OverlayContainer>
-      <StatusIndicator status={trackingState} />
-      <InstructionBox visible={trackingState !== 'tracking'}>
+      <StatusIndicator $status={trackingState} />
+      <InstructionBox $visible={trackingState !== 'tracking'}>
         <InstructionText>{getInstructionText()}</InstructionText>
       </InstructionBox>
     </OverlayContainer>

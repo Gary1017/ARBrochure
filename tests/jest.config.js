@@ -29,4 +29,5 @@ module.exports = {
   testTimeout: 10000,
   roots: ['<rootDir>'],
   modulePaths: ['<rootDir>/../packages/frontend/src', '<rootDir>/../packages/shared/src'],
+  displayName: 'Integration Tests',
 }; 

@@ -36,6 +36,17 @@ export class ModelManager {
             const modelGroup = new THREE.Group();
             modelGroup.add(gltf.scene);
 
+            // Ensure materials are properly set up for textures
+            gltf.scene.traverse((child) => {
+              if (child instanceof THREE.Mesh && child.material) {
+                const material = child.material as THREE.MeshStandardMaterial;
+                if (material.map) {
+                  material.map.flipY = false; // GLTF textures don't need Y flip
+                }
+                material.needsUpdate = true;
+              }
+            });
+
             // Position the model according to config
             modelGroup.position.set(
               config.position[0],
