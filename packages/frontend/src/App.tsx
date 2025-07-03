@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import LoadingScreen from './components/LoadingScreen';
 import ARTestPage from './components/ARTestPage';
 import './App.css';
