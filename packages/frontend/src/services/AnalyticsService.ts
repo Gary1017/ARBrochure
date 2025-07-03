@@ -73,6 +73,16 @@ export class AnalyticsService {
     this.queueEvent(event);
   }
 
+  async trackEvent(eventType: string, data: Record<string, any> = {}): Promise<void> {
+    this.queueEvent({
+      timestamp: new Date().toISOString(),
+      event_type: eventType,
+      session_id: this.sessionId,
+      user_id: this.userId,
+      ...data,
+    });
+  }
+
   private queueEvent(event: AREvent): void {
     this.eventQueue.push(event);
     
@@ -109,6 +119,20 @@ export class AnalyticsService {
     try {
       await this.sendEvent(event);
     } catch (error) {
+      // Suppress connection refused/failed to fetch errors in development
+      const isNetworkError = error instanceof Error && (
+        error.message.includes('Failed to fetch') ||
+        error.message.includes('ERR_CONNECTION_REFUSED')
+      );
+      if (isNetworkError) {
+        if (process.env.NODE_ENV === 'development') {
+          // Only log as debug in dev
+          if (typeof console !== 'undefined' && console.debug) {
+            console.debug(`AnalyticsService: Network error suppressed in dev:`, error.message, event.event_type);
+          }
+          return;
+        }
+      }
       // If it's a rate limit error (429) and we haven't exceeded max retries
       if (error instanceof Error && 
           error.message.includes('429') && 

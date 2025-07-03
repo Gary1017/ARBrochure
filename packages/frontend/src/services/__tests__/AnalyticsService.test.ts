@@ -159,11 +159,27 @@ describe('AnalyticsService', () => {
   });
 
   describe('Error Handling', () => {
+    let consoleWarnSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleWarnSpy.mockRestore();
+    });
+
     it('should handle network errors gracefully', async () => {
       const mockError = new Error('Network error');
       (fetch as jest.Mock).mockRejectedValueOnce(mockError);
 
-      await expect(analyticsService.trackAppLaunched()).rejects.toThrow('Network error');
+      // Should not throw, but should log warning
+      await expect(analyticsService.trackAppLaunched()).resolves.toBeUndefined();
+      
+      // Wait for async processing
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      expect(consoleWarnSpy).toHaveBeenCalledWith('Analytics error (Network error):', 'app_launched');
     });
 
     it('should handle server errors gracefully', async () => {
@@ -173,7 +189,13 @@ describe('AnalyticsService', () => {
         statusText: 'Internal Server Error',
       });
 
-      await expect(analyticsService.trackAppLaunched()).rejects.toThrow('HTTP error! status: 500');
+      // Should not throw, but should log warning
+      await expect(analyticsService.trackAppLaunched()).resolves.toBeUndefined();
+      
+      // Wait for async processing
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      expect(consoleWarnSpy).toHaveBeenCalledWith('Analytics error (HTTP error! status: 500):', 'app_launched');
     });
 
     it('should handle malformed JSON responses', async () => {
@@ -184,7 +206,13 @@ describe('AnalyticsService', () => {
         },
       });
 
-      await expect(analyticsService.trackAppLaunched()).rejects.toThrow('Invalid JSON');
+      // Should not throw, but should log warning
+      await expect(analyticsService.trackAppLaunched()).resolves.toBeUndefined();
+      
+      // Wait for async processing
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      expect(consoleWarnSpy).toHaveBeenCalledWith('Analytics error (Invalid JSON):', 'app_launched');
     });
 
     it('should handle API errors from backend', async () => {
@@ -194,7 +222,13 @@ describe('AnalyticsService', () => {
         json: async () => mockResponse,
       });
 
-      await expect(analyticsService.trackAppLaunched()).rejects.toThrow('API error: Invalid event data');
+      // Should not throw, but should log warning
+      await expect(analyticsService.trackAppLaunched()).resolves.toBeUndefined();
+      
+      // Wait for async processing
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      expect(consoleWarnSpy).toHaveBeenCalledWith('Analytics error (API error: Invalid event data):', 'app_launched');
     });
 
     it('should handle API errors without error message', async () => {
@@ -204,7 +238,13 @@ describe('AnalyticsService', () => {
         json: async () => mockResponse,
       });
 
-      await expect(analyticsService.trackAppLaunched()).rejects.toThrow('API error: Unknown error');
+      // Should not throw, but should log warning
+      await expect(analyticsService.trackAppLaunched()).resolves.toBeUndefined();
+      
+      // Wait for async processing
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      expect(consoleWarnSpy).toHaveBeenCalledWith('Analytics error (API error: Unknown error):', 'app_launched');
     });
   });
 
@@ -276,6 +316,9 @@ describe('AnalyticsService', () => {
       // Track an event
       analyticsService.trackAppLaunched();
       
+      // Wait for initial processing
+      await Promise.resolve();
+      
       // Fast-forward time to trigger retry
       jest.advanceTimersByTime(1000);
       
@@ -306,6 +349,9 @@ describe('AnalyticsService', () => {
       
       // Track an event
       analyticsService.trackAppLaunched();
+      
+      // Wait for initial processing
+      await Promise.resolve();
       
       // Fast-forward time for all retries (1s, 2s, 4s)
       jest.advanceTimersByTime(1000); // First retry
@@ -341,6 +387,9 @@ describe('AnalyticsService', () => {
       analyticsService.trackAppLaunched();
       analyticsService.trackTrackingStarted();
       analyticsService.trackTrackingLost();
+      
+      // Wait for initial processing
+      await Promise.resolve();
       
       // First event should be processed immediately
       expect(fetchMock).toHaveBeenCalledTimes(1);

@@ -11,6 +11,7 @@ import {
   type MindARThreeInstance,
 } from '../types/mindar';
 import { AnalyticsService } from '../services/AnalyticsService';
+import { TrackingStabilizer, type TrackingStabilityConfig } from '../services/TrackingStabilizer';
 
 const SceneContainer = styled.div`
   position: fixed;
@@ -23,21 +24,48 @@ const SceneContainer = styled.div`
 `;
 
 interface ARSceneProps {
-  onTrackingStateChange: (state: TrackingState) => void;
+  onTrackingStateChange?: (state: TrackingState) => void;
+  stabilityMode?: 'responsive' | 'stable' | 'ultra-stable';
+  onTrackingStart?: () => void;
+  onTrackingLost?: () => void;
+  onMetricsUpdate?: (metrics: any) => void;
 }
 
-const ARScene: React.FC<ARSceneProps> = ({ onTrackingStateChange }) => {
+const ARScene: React.FC<ARSceneProps> = ({ 
+  onTrackingStateChange, 
+  stabilityMode = 'ultra-stable',
+  onTrackingStart,
+  onTrackingLost,
+  onMetricsUpdate
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mindARRef = useRef<MindARThreeInstance | null>(null);
   const analyticsServiceRef = useRef<AnalyticsService | null>(null);
+  const trackingStabilizerRef = useRef<TrackingStabilizer | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const arStartedRef = useRef(false);
+  const cubeRef = useRef<THREE.Mesh | null>(null);
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  const analyticsEndpoint = isProduction ? 'http://localhost:3001' : '';
 
   const loadInitialModels = useCallback(
     async (anchorGroup: THREE.Group) => {
-      if (!analyticsServiceRef.current) return;
-
-      // Create a simple colored cube instead of loading GLTF
+      // Remove previous cube if exists
+      if (cubeRef.current) {
+        anchorGroup.remove(cubeRef.current);
+        if ((cubeRef.current as any).geometry) (cubeRef.current as any).geometry.dispose?.();
+        if ((cubeRef.current as any).material) (cubeRef.current as any).material.dispose?.();
+        cubeRef.current = null;
+      }
+      // Remove all other children (defensive)
+      while (anchorGroup.children.length > 0) {
+        const child = anchorGroup.children[0];
+        anchorGroup.remove(child);
+        if ((child as any).geometry) (child as any).geometry.dispose?.();
+        if ((child as any).material) (child as any).material.dispose?.();
+      }
+      // Create a simple colored cube
       const geometry = new THREE.BoxGeometry(1, 1, 1);
       const material = new THREE.MeshStandardMaterial({ 
         color: 0x00ff00,
@@ -47,21 +75,22 @@ const ARScene: React.FC<ARSceneProps> = ({ onTrackingStateChange }) => {
       const cube = new THREE.Mesh(geometry, material);
       cube.position.set(0, 0, 0);
       cube.scale.set(0.2, 0.2, 0.2);
-      
-      // Add the cube to the anchor group
       anchorGroup.add(cube);
-      
+      cubeRef.current = cube;
+      // Debug: print number of children in anchor group
+      console.debug('Anchor group children after add:', anchorGroup.children.length);
       // Add a simple animation
       const animate = () => {
-        if (arStartedRef.current) {
-          cube.rotation.x += 0.01;
-          cube.rotation.y += 0.01;
+        if (arStartedRef.current && cubeRef.current) {
+          cubeRef.current.rotation.x += 0.01;
+          cubeRef.current.rotation.y += 0.01;
           requestAnimationFrame(animate);
         }
       };
       animate();
-      
-      analyticsServiceRef.current?.trackModelTapped('cube');
+      if (analyticsServiceRef.current) {
+        analyticsServiceRef.current.trackModelTapped('cube');
+      }
     },
     []
   );
@@ -70,16 +99,26 @@ const ARScene: React.FC<ARSceneProps> = ({ onTrackingStateChange }) => {
     if (!containerRef.current || arStartedRef.current) {
       return;
     }
-
-    onTrackingStateChange('initializing');
-    analyticsServiceRef.current = new AnalyticsService('http://localhost:3001');
-
+    onTrackingStateChange?.('initializing');
+    analyticsServiceRef.current = (isProduction && analyticsEndpoint)
+      ? new AnalyticsService(analyticsEndpoint)
+      : null;
+    trackingStabilizerRef.current = new TrackingStabilizer({
+      stabilityMode: 'ultra-stable',
+      smoothingFactor: 0.85,
+      jitterThreshold: 8.0,
+      adaptiveSmoothing: true
+    });
     try {
       const mindARInstance = new MindARThree({
         container: containerRef.current,
         imageTargetSrc: '/assets/mindar/examples/card.mind',
-        uiScanning: "no", // Disable default UI
-        uiLoading: "no",  // Disable default UI
+        uiScanning: "no",
+        uiLoading: "no",
+        filterMinCF: 0.001,
+        filterBeta: 0.05,
+        warmupTolerance: 12,
+        missTolerance: 20,
       });
       mindARRef.current = mindARInstance;
 
@@ -104,13 +143,40 @@ const ARScene: React.FC<ARSceneProps> = ({ onTrackingStateChange }) => {
       scene.add(directionalLight);
 
       const anchor = mindARInstance.addAnchor(0);
+      
+      // Enhanced tracking event handlers with stabilization
       anchor.onTargetFound = () => {
-        onTrackingStateChange('tracking');
-        analyticsServiceRef.current?.trackTrackingStarted();
+        console.debug('onTargetFound fired');
+        onTrackingStateChange?.('tracking');
+        onTrackingStart?.();
+        if (trackingStabilizerRef.current) {
+          const metrics = trackingStabilizerRef.current.getStabilityMetrics();
+          onMetricsUpdate?.(metrics);
+        }
+        // Load a cube when target is found
+        loadInitialModels(anchor.group);
+        if (analyticsServiceRef.current) {
+          analyticsServiceRef.current.trackTrackingStarted();
+        }
       };
+      
       anchor.onTargetLost = () => {
-        onTrackingStateChange('lost');
-        analyticsServiceRef.current?.trackTrackingLost();
+        console.debug('onTargetLost fired');
+        onTrackingStateChange?.('lost');
+        onTrackingLost?.();
+        if (analyticsServiceRef.current) {
+          analyticsServiceRef.current.trackTrackingLost();
+        }
+        // Destroy the cube when target is lost
+        if (cubeRef.current && anchor.group) {
+          anchor.group.remove(cubeRef.current);
+          if ((cubeRef.current as any).geometry) (cubeRef.current as any).geometry.dispose?.();
+          if ((cubeRef.current as any).material) (cubeRef.current as any).material.dispose?.();
+          cubeRef.current = null;
+        }
+        if (trackingStabilizerRef.current) {
+          trackingStabilizerRef.current.reset();
+        }
       };
 
       await loadInitialModels(anchor.group);
@@ -127,9 +193,15 @@ const ARScene: React.FC<ARSceneProps> = ({ onTrackingStateChange }) => {
       renderLoop();
     } catch (error) {
       console.error('Failed to initialize AR:', error);
-      onTrackingStateChange('error');
+      onTrackingStateChange?.('error');
+      
+      // Track initialization errors
+      analyticsServiceRef.current?.trackEvent('ar_initialization_error', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stabilityMode
+      });
     }
-  }, [onTrackingStateChange, loadInitialModels]);
+  }, [onTrackingStateChange, loadInitialModels, stabilityMode]);
 
   const cleanup = useCallback(() => {
     if (arStartedRef.current && mindARRef.current) {
@@ -140,7 +212,17 @@ const ARScene: React.FC<ARSceneProps> = ({ onTrackingStateChange }) => {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
+    if (trackingStabilizerRef.current) {
+      trackingStabilizerRef.current.reset();
+    }
   }, []);
+
+  // Handle stability mode changes
+  useEffect(() => {
+    if (trackingStabilizerRef.current) {
+      trackingStabilizerRef.current.updateConfig({ stabilityMode });
+    }
+  }, [stabilityMode]);
 
   useEffect(() => {
     initializeAR();

@@ -323,4 +323,161 @@ The project includes a PowerShell setup script for MindAR assets:
 
 ---
 
-**This summary will be updated at each major milestone.** 
+**This summary will be updated at each major milestone.**
+
+---
+
+## Development Plan: July 3, 2025 - Tracking Stability Improvements
+
+### 🎯 Problem Statement
+The current AR image plane tracking is too sensitive to camera and image trembling, causing:
+- Jittery 3D model positioning
+- Frequent tracking loss during minor camera movements
+- Poor user experience with unstable AR content overlay
+
+### 🔍 Root Cause Analysis
+
+#### Current MindAR Tracking Algorithm
+Based on analysis of MindAR implementation, the tracking system uses several parameters that control stability:
+
+1. **`filterMinCF`** (Confidence Filter) - Minimum confidence threshold for tracking
+2. **`filterBeta`** (Smoothing Beta) - Controls smoothing filter responsiveness
+3. **`warmupTolerance`** - Frames required before showing tracking (stability buffer)
+4. **`missTolerance`** - Frames tolerance before losing tracking
+
+#### Current Implementation Gap
+Our ARScene component uses MindAR with default parameters:
+```typescript
+const mindARInstance = new MindARThree({
+  container: containerRef.current,
+  imageTargetSrc: '/assets/mindar/examples/card.mind',
+  uiScanning: "no",
+  uiLoading: "no",
+  // Missing: tracking stability parameters
+});
+```
+
+### 🛠️ Solution Strategy
+
+#### Phase 1: Parameter Investigation & Testing Framework
+1. **Extract Default Values**: Analyze MindAR controller code to find current defaults
+2. **Create Test Environment**: Set up controlled testing environment with stability metrics
+3. **Baseline Measurements**: Record current jitter/stability metrics
+
+#### Phase 2: Stability Parameter Optimization
+1. **Configure Tracking Parameters**:
+   - Increase `warmupTolerance` (more frames before showing)
+   - Increase `missTolerance` (higher tolerance for temporary tracking loss)
+   - Optimize `filterBeta` for smoother pose estimation
+   - Adjust `filterMinCF` for better confidence filtering
+
+2. **Implement Progressive Enhancement**:
+   - Start with conservative stability settings
+   - Add user-configurable stability modes (Stable vs Responsive)
+   - Implement adaptive parameters based on movement detection
+
+#### Phase 3: Advanced Smoothing Implementation
+1. **Pose Smoothing Layer**: Add our own smoothing on top of MindAR tracking
+2. **Temporal Filtering**: Implement temporal consistency checks
+3. **Movement Prediction**: Add simple prediction for smoother transitions
+
+#### Phase 4: Testing & Validation
+1. **Comprehensive Testing**: Test across different devices and lighting conditions
+2. **Performance Impact**: Ensure stability doesn't compromise tracking accuracy
+3. **User Experience Validation**: Verify improved user experience
+
+### 📋 Technical Implementation Plan
+
+#### Step 1: Enhanced MindAR Configuration
+```typescript
+// Target configuration for improved stability
+const mindARInstance = new MindARThree({
+  container: containerRef.current,
+  imageTargetSrc: '/assets/mindar/examples/card.mind',
+  uiScanning: "no",
+  uiLoading: "no",
+  // Stability parameters to be tuned
+  filterMinCF: 0.02,      // Lower = more tolerant (vs default ~0.01)
+  filterBeta: 0.1,        // Lower = more smoothing (vs default ~1.0)
+  warmupTolerance: 5,     // More frames before showing (vs default ~2)
+  missTolerance: 15,      // Higher tolerance (vs default ~10)
+});
+```
+
+#### Step 2: Custom Smoothing Service
+```typescript
+interface TrackingStabilityConfig {
+  smoothingFactor: number;
+  jitterThreshold: number;
+  stabilityMode: 'responsive' | 'stable' | 'ultra-stable';
+}
+
+class TrackingStabilizer {
+  private positionHistory: Float32Array[];
+  private rotationHistory: Float32Array[];
+  
+  smoothPose(worldMatrix: Float32Array): Float32Array;
+  detectJitter(currentPose: Float32Array): boolean;
+  adaptiveSmoothing(movementLevel: number): void;
+}
+```
+
+#### Step 3: Test-Driven Development Approach
+1. **Unit Tests**: Test smoothing algorithms with synthetic jitter data
+2. **Integration Tests**: Test MindAR parameter effects on tracking stability
+3. **Performance Tests**: Measure frame rate impact of stability improvements
+
+### 📊 Success Metrics
+
+#### Quantitative Metrics
+- **Jitter Reduction**: < 2px movement tolerance for stable objects
+- **Tracking Persistence**: > 90% uptime during minor hand tremor
+- **Performance**: Maintain > 30 FPS on target devices
+- **Accuracy**: < 5% degradation in tracking precision
+
+#### User Experience Metrics
+- **Perceived Stability**: User testing for stability perception
+- **Tracking Recovery**: < 1 second recovery time after tracking loss
+- **Responsiveness**: < 100ms latency for intentional movements
+
+### 🔧 Implementation Timeline
+
+**Day 1 (July 3)**: 
+- ✅ Development plan creation
+- ✅ Git branch setup
+- 🔄 MindAR algorithm analysis
+- 🔄 Parameter extraction and baseline testing
+
+**Day 2-3**: 
+- Parameter optimization and testing
+- Custom smoothing implementation
+- Performance impact assessment
+
+**Day 4-5**: 
+- Advanced stability features
+- Cross-device testing
+- Documentation and cleanup
+
+### 🧪 Testing Strategy
+
+#### Controlled Testing Environment
+1. **Synthetic Movement**: Programmatic camera shake simulation
+2. **Real-world Scenarios**: Handheld device testing with varying movement patterns
+3. **Device Diversity**: Testing across different mobile devices and browsers
+
+#### Test Cases
+1. **Static Target with Camera Jitter**: Measure 3D model position stability
+2. **Intentional Movement**: Ensure responsive tracking for deliberate movement
+3. **Tracking Recovery**: Test recovery time after temporary target occlusion
+4. **Edge Cases**: Low light, blurred images, partial occlusion
+
+### 🎯 Expected Outcomes
+
+1. **Improved User Experience**: Significantly reduced AR content jitter
+2. **Better Tracking Robustness**: More reliable tracking in real-world conditions
+3. **Configurable Stability**: Options for different use cases and user preferences
+4. **Performance Optimization**: Stability improvements without frame rate degradation
+
+---
+
+**This development plan will be updated with progress and findings throughout the implementation process.** 

@@ -1,10 +1,11 @@
 // AR Event Types
 export interface AREvent {
   timestamp: string;
-  event_type: 'app_launched' | 'model_tapped' | 'tracking_started' | 'tracking_lost' | 'app_closed';
+  event_type: 'app_launched' | 'model_tapped' | 'tracking_started' | 'tracking_lost' | 'app_closed' | 'stability_metrics' | 'ar_initialization_error' | string;
   model_id?: string;
   session_id: string;
   user_id: string;
+  [key: string]: any; // Allow additional properties for custom events
 }
 
 // 3D Model Configuration

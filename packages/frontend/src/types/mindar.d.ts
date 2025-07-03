@@ -15,9 +15,34 @@ declare module 'mind-ar/dist/mindar-image-three.prod.js' {
     uiLoading?: string;
     uiScanning?: string;
     uiError?: string;
+    
+    // Tracking stability parameters (defaults from MindAR source)
+    /** 
+     * Minimum confidence filter threshold for tracking stability
+     * Lower values = more tolerant tracking (less sensitive to jitter)
+     * Default: 0.001 (1e-3)
+     */
     filterMinCF?: number | null;
+    
+    /** 
+     * Filter beta parameter for pose smoothing 
+     * Lower values = more smoothing, higher values = more responsive
+     * Default: 1000 (1e3)
+     */
     filterBeta?: number | null;
+    
+    /** 
+     * Number of frames required before showing tracking (stability buffer)
+     * Higher values = more stable but slower initial tracking
+     * Default: 5 frames
+     */
     warmupTolerance?: number | null;
+    
+    /** 
+     * Number of frames tolerance before losing tracking
+     * Higher values = more tolerant to temporary tracking loss
+     * Default: 5 frames
+     */
     missTolerance?: number | null;
   }
 
