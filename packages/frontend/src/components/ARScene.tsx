@@ -2,7 +2,16 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import * as THREE from 'three';
-import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js';
+// MindAR is loaded globally via script tag
+declare global {
+  interface Window {
+    MINDAR: {
+      IMAGE: {
+        MindARThree: any;
+      };
+    };
+  }
+}
 import {
   type TrackingState,
   type ModelConfig,
@@ -107,18 +116,21 @@ const ARScene: React.FC<ARSceneProps> = ({
       stabilityMode: 'ultra-stable',
       smoothingFactor: 0.85,
       jitterThreshold: 8.0,
-      adaptiveSmoothing: true
+      adaptiveSmoothing: true,
+      featureDetectionMode: 'aggressive',
+      scaleInvariantTracking: true
     });
     try {
-      const mindARInstance = new MindARThree({
+      const mindARInstance = new window.MINDAR.IMAGE.MindARThree({
         container: containerRef.current,
         imageTargetSrc: '/assets/mindar/examples/card.mind',
         uiScanning: "no",
         uiLoading: "no",
-        filterMinCF: 0.001,
-        filterBeta: 0.05,
-        warmupTolerance: 12,
-        missTolerance: 20,
+        // Optimized parameters for scale-invariant feature detection
+        filterMinCF: 0.0005,     // Lower threshold for better detection at extreme angles
+        filterBeta: 500,         // Moderate smoothing - allow FREAK descriptor matching
+        warmupTolerance: 3,      // Faster initial acquisition for responsive tracking
+        missTolerance: 8,        // Moderate tolerance for angle changes
       });
       mindARRef.current = mindARInstance;
 

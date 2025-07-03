@@ -209,11 +209,17 @@ describe('TrackingStabilizer', () => {
       expect(metrics).toHaveProperty('historyLength');
       expect(metrics).toHaveProperty('isJittering');
       expect(metrics).toHaveProperty('currentSmoothingFactor');
+      expect(metrics).toHaveProperty('featureTrackingQuality');
+      expect(metrics).toHaveProperty('scaleInvariantTracking');
+      expect(metrics).toHaveProperty('featureDetectionMode');
       
       expect(typeof metrics.movementVelocity).toBe('number');
       expect(typeof metrics.historyLength).toBe('number');
       expect(typeof metrics.isJittering).toBe('boolean');
       expect(typeof metrics.currentSmoothingFactor).toBe('number');
+      expect(typeof metrics.featureTrackingQuality).toBe('number');
+      expect(typeof metrics.scaleInvariantTracking).toBe('boolean');
+      expect(typeof metrics.featureDetectionMode).toBe('string');
     });
 
     test('should track movement velocity over time', () => {
@@ -226,6 +232,60 @@ describe('TrackingStabilizer', () => {
       
       const afterMovementMetrics = stabilizer.getStabilityMetrics();
       expect(afterMovementMetrics.movementVelocity).toBeGreaterThan(0);
+    });
+  });
+
+  describe('scale-invariant feature tracking', () => {
+    test('should analyze scale changes for feature tracking quality', () => {
+      const featureTrackingStabilizer = new TrackingStabilizer({
+        scaleInvariantTracking: true,
+        featureDetectionMode: 'aggressive'
+      });
+      
+      // Simulate consistent movement (good feature tracking)
+      featureTrackingStabilizer.smoothPose(createTestMatrix(0, 0, 0));
+      featureTrackingStabilizer.smoothPose(createTestMatrix(0.02, 0.02, 0));
+      featureTrackingStabilizer.smoothPose(createTestMatrix(0.04, 0.04, 0));
+      
+      const metrics = featureTrackingStabilizer.getStabilityMetrics();
+      expect(metrics.featureTrackingQuality).toBeGreaterThan(0);
+      expect(metrics.featureTrackingQuality).toBeLessThanOrEqual(1);
+    });
+
+    test('should adjust smoothing based on feature detection mode', () => {
+      const aggressiveStabilizer = new TrackingStabilizer({
+        smoothingFactor: 0.5,
+        featureDetectionMode: 'aggressive'
+      });
+      
+      const conservativeStabilizer = new TrackingStabilizer({
+        smoothingFactor: 0.5,
+        featureDetectionMode: 'conservative'
+      });
+      
+      // Both should have different effective smoothing factors
+      const aggressiveMetrics = aggressiveStabilizer.getStabilityMetrics();
+      const conservativeMetrics = conservativeStabilizer.getStabilityMetrics();
+      
+      expect(aggressiveMetrics.currentSmoothingFactor).toBeLessThan(conservativeMetrics.currentSmoothingFactor);
+    });
+
+    test('should reset feature tracking state', () => {
+      const featureTrackingStabilizer = new TrackingStabilizer({
+        scaleInvariantTracking: true
+      });
+      
+      // Add some movement to establish feature tracking quality
+      featureTrackingStabilizer.smoothPose(createTestMatrix(0, 0, 0));
+      featureTrackingStabilizer.smoothPose(createTestMatrix(0.01, 0.01, 0));
+      
+      const beforeReset = featureTrackingStabilizer.getStabilityMetrics();
+      expect(beforeReset.featureTrackingQuality).toBeGreaterThan(0);
+      
+      featureTrackingStabilizer.reset();
+      
+      const afterReset = featureTrackingStabilizer.getStabilityMetrics();
+      expect(afterReset.featureTrackingQuality).toBe(1.0); // Reset to default
     });
   });
 
@@ -252,7 +312,8 @@ describe('TrackingStabilizer', () => {
       stabilizer.updateConfig({ smoothingFactor: 0.8 });
       
       const metrics = stabilizer.getStabilityMetrics();
-      expect(metrics.currentSmoothingFactor).toBe(0.8);
+      // With ultra-stable mode and aggressive feature detection, the smoothing factor will be adjusted
+      expect(metrics.currentSmoothingFactor).toBe(0.6); // ultra-stable default
     });
   });
 

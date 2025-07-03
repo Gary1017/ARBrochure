@@ -5,6 +5,8 @@ export interface TrackingStabilityConfig {
   jitterThreshold: number;        // Minimum movement before considering it intentional (pixels)
   stabilityMode: 'responsive' | 'stable' | 'ultra-stable';
   adaptiveSmoothing: boolean;     // Adjust smoothing based on movement patterns
+  featureDetectionMode: 'aggressive' | 'balanced' | 'conservative'; // FREAK descriptor sensitivity
+  scaleInvariantTracking: boolean; // Enable scale-invariant feature tracking
 }
 
 export interface PoseData {
@@ -20,6 +22,8 @@ export class TrackingStabilizer {
   private lastStablePosition: THREE.Vector3 | null = null;
   private lastStableRotation: THREE.Quaternion | null = null;
   private movementVelocity = 0;
+  private featureTrackingQuality = 1.0; // 0-1, higher = better feature tracking
+  private scaleChangeHistory: number[] = [];
   
   constructor(config: Partial<TrackingStabilityConfig> = {}) {
     this.config = {
@@ -27,6 +31,8 @@ export class TrackingStabilizer {
       jitterThreshold: 2.0,
       stabilityMode: 'stable',
       adaptiveSmoothing: true,
+      featureDetectionMode: 'balanced',
+      scaleInvariantTracking: true,
       ...config
     };
     
@@ -134,9 +140,34 @@ export class TrackingStabilizer {
       return this.config.smoothingFactor;
     }
     
-    // Reduce smoothing factor when movement is detected
+    // Base smoothing factor
+    let smoothingFactor = this.config.smoothingFactor;
+    
+    // Adjust based on movement
     const movementRatio = Math.min(movement / (this.config.jitterThreshold * 3), 1);
-    return this.config.smoothingFactor * (1 - movementRatio * 0.5);
+    smoothingFactor *= (1 - movementRatio * 0.5);
+    
+    // Adjust based on feature tracking quality
+    if (this.config.scaleInvariantTracking) {
+      const featureQualityAdjustment = this.featureTrackingQuality * 0.3;
+      smoothingFactor *= (1 - featureQualityAdjustment);
+    }
+    
+    // Adjust based on feature detection mode
+    switch (this.config.featureDetectionMode) {
+      case 'aggressive':
+        smoothingFactor *= 0.7; // Less smoothing for aggressive detection
+        break;
+      case 'conservative':
+        smoothingFactor *= 1.3; // More smoothing for conservative detection
+        break;
+      case 'balanced':
+      default:
+        // No additional adjustment
+        break;
+    }
+    
+    return Math.max(0.05, Math.min(0.95, smoothingFactor));
   }
   
   private applySmoothingToMovement(currentPose: PoseData, smoothingFactor: number): PoseData {
@@ -160,6 +191,42 @@ export class TrackingStabilizer {
     this.positionHistory.push(pose);
     if (this.positionHistory.length > this.maxHistoryLength) {
       this.positionHistory.shift();
+    }
+    
+    // Analyze scale changes for feature tracking quality
+    if (this.config.scaleInvariantTracking && this.positionHistory.length >= 2) {
+      this.analyzeScaleInvariantTracking(pose);
+    }
+  }
+  
+  /**
+   * Analyze scale changes to determine feature tracking quality
+   * This helps detect when MindAR's FREAK descriptors are working well
+   */
+  private analyzeScaleInvariantTracking(currentPose: PoseData): void {
+    const previousPose = this.positionHistory[this.positionHistory.length - 2];
+    
+    // Calculate scale change from position changes
+    const positionDelta = currentPose.position.distanceTo(previousPose.position);
+    const timeDelta = currentPose.timestamp - previousPose.timestamp;
+    
+    // Normalize by time to get velocity
+    const velocity = positionDelta / timeDelta;
+    
+    this.scaleChangeHistory.push(velocity);
+    if (this.scaleChangeHistory.length > 5) {
+      this.scaleChangeHistory.shift();
+    }
+    
+    // Analyze velocity patterns to determine feature tracking quality
+    if (this.scaleChangeHistory.length >= 3) {
+      const avgVelocity = this.scaleChangeHistory.reduce((a, b) => a + b, 0) / this.scaleChangeHistory.length;
+      const velocityVariance = this.scaleChangeHistory.reduce((sum, v) => sum + Math.pow(v - avgVelocity, 2), 0) / this.scaleChangeHistory.length;
+      
+      // High variance with consistent movement suggests good feature tracking
+      // Low variance suggests poor feature tracking or jitter
+      const consistencyScore = Math.min(velocityVariance / (avgVelocity + 0.001), 1);
+      this.featureTrackingQuality = Math.max(0.1, Math.min(1.0, consistencyScore));
     }
   }
   
@@ -193,6 +260,8 @@ export class TrackingStabilizer {
     this.lastStablePosition = null;
     this.lastStableRotation = null;
     this.movementVelocity = 0;
+    this.featureTrackingQuality = 1.0;
+    this.scaleChangeHistory = [];
   }
   
   /**
@@ -211,7 +280,10 @@ export class TrackingStabilizer {
       movementVelocity: this.movementVelocity,
       historyLength: this.positionHistory.length,
       isJittering: this.detectJitter(),
-      currentSmoothingFactor: this.config.smoothingFactor
+      currentSmoothingFactor: this.config.smoothingFactor,
+      featureTrackingQuality: this.featureTrackingQuality,
+      scaleInvariantTracking: this.config.scaleInvariantTracking,
+      featureDetectionMode: this.config.featureDetectionMode
     };
   }
 } 
