@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import ARScene from './ARScene';
-import { TrackingStabilityConfig } from '../services/TrackingStabilizer';
 
 interface TrackingMetrics {
   movementVelocity: number;
@@ -16,7 +15,6 @@ export const ARTestPage: React.FC = () => {
   const [metrics, setMetrics] = useState<TrackingMetrics | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [testScenario, setTestScenario] = useState<'normal' | 'jitter' | 'movement'>('normal');
-  const metricsRef = useRef<HTMLDivElement>(null);
   const [logs, setLogs] = useState<string[]>([]);
 
   const addLog = (message: string) => {

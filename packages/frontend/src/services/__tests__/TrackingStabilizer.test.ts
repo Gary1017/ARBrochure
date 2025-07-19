@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { TrackingStabilizer, type TrackingStabilityConfig, type PoseData } from '../TrackingStabilizer';
+import { TrackingStabilizer, type TrackingStabilityConfig } from '../TrackingStabilizer';
 
 describe('TrackingStabilizer', () => {
   let stabilizer: TrackingStabilizer;

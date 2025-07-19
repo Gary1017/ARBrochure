@@ -1,8 +1,6 @@
-import React from 'react';
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ARScene from '../ARScene';
-import { TrackingState } from '@shared/index';
 
 // Mock Three.js
 jest.mock('three', () => ({

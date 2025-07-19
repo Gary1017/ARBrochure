@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 import { ModelManager } from '../ModelManager';
-import { ModelConfig, AnimationConfig } from '@shared/index';
+import { ModelConfig } from '@shared/index';
 
 // Mock Three.js
 jest.mock('three', () => ({
@@ -128,7 +128,7 @@ describe('ModelManager', () => {
       };
 
       const mockLoader = {
-        load: jest.fn((path, onLoad, onProgress, onError) => {
+        load: jest.fn((_path, onLoad, _onProgress, _onError) => {
           onLoad(mockGLTF);
         }),
       };
@@ -145,7 +145,7 @@ describe('ModelManager', () => {
 
     it('should handle model loading errors', async () => {
       const mockLoader = {
-        load: jest.fn((path, onLoad, onProgress, onError) => {
+        load: jest.fn((_path, _onLoad, _onProgress, onError) => {
           onError(new Error('Failed to load model'));
         }),
       };
@@ -174,7 +174,7 @@ describe('ModelManager', () => {
       require('three').Group.mockImplementation(() => mockGroup);
 
       const mockLoader = {
-        load: jest.fn((path, onLoad) => {
+        load: jest.fn((_path, onLoad) => {
           onLoad(mockGLTF);
         }),
       };
@@ -210,7 +210,7 @@ describe('ModelManager', () => {
       require('three').AnimationMixer.mockImplementation(() => mockMixer);
 
       const mockLoader = {
-        load: jest.fn((path, onLoad) => {
+        load: jest.fn((_path, onLoad) => {
           onLoad(mockGLTF);
         }),
       };
@@ -245,7 +245,7 @@ describe('ModelManager', () => {
       require('three').AnimationMixer.mockImplementation(() => mockMixer);
 
       const mockLoader = {
-        load: jest.fn((path, onLoad) => onLoad(mockGLTF)),
+        load: jest.fn((_path, onLoad) => onLoad(mockGLTF)),
       };
 
       require('three').GLTFLoader.mockImplementation(() => mockLoader);
@@ -327,7 +327,7 @@ describe('ModelManager', () => {
       };
 
       const mockLoader = {
-        load: jest.fn((path, onLoad) => onLoad(mockGLTF)),
+        load: jest.fn((_path, onLoad) => onLoad(mockGLTF)),
       };
 
       require('three').GLTFLoader.mockImplementation(() => mockLoader);
@@ -382,7 +382,7 @@ describe('ModelManager', () => {
       require('three').AnimationMixer.mockImplementation(() => mockMixer);
 
       const mockLoader = {
-        load: jest.fn((path, onLoad) => onLoad(mockGLTF)),
+        load: jest.fn((_path, onLoad) => onLoad(mockGLTF)),
       };
 
       require('three').GLTFLoader.mockImplementation(() => mockLoader);
@@ -427,7 +427,7 @@ describe('ModelManager', () => {
       require('three').AnimationMixer.mockImplementation(() => mockMixer);
 
       const mockLoader = {
-        load: jest.fn((path, onLoad) => onLoad(mockGLTF)),
+        load: jest.fn((_path, onLoad) => onLoad(mockGLTF)),
       };
 
       require('three').GLTFLoader.mockImplementation(() => mockLoader);
@@ -453,7 +453,7 @@ describe('ModelManager', () => {
       };
 
       const mockLoader = {
-        load: jest.fn((path, onLoad) => onLoad(mockGLTF)),
+        load: jest.fn((_path, onLoad) => onLoad(mockGLTF)),
       };
 
       require('three').GLTFLoader.mockImplementation(() => mockLoader);
@@ -476,7 +476,7 @@ describe('ModelManager', () => {
       };
 
       const mockLoader = {
-        load: jest.fn((path, onLoad) => onLoad(mockGLTF)),
+        load: jest.fn((_path, onLoad) => onLoad(mockGLTF)),
       };
 
       require('three').GLTFLoader.mockImplementation(() => mockLoader);

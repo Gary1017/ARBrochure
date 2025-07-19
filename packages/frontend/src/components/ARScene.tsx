@@ -2,16 +2,16 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import * as THREE from 'three';
+// @ts-ignore
 import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js';
 import {
   type TrackingState,
-  type ModelConfig,
 } from '@shared';
 import {
   type MindARThreeInstance,
 } from '../types/mindar';
 import { AnalyticsService } from '../services/AnalyticsService';
-import { TrackingStabilizer, type TrackingStabilityConfig } from '../services/TrackingStabilizer';
+import { TrackingStabilizer } from '../services/TrackingStabilizer';
 
 const SceneContainer = styled.div`
   position: fixed;
